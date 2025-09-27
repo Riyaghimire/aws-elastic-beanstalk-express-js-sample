@@ -5,8 +5,10 @@ pipeline {
         NODE_VERSION = "16"
         APP_NAME = "aws-elastic-beanstalk-express-js-sample"
         IMAGE_NAME = "riyaghimire54/${APP_NAME}"
-        DOCKERHUB_CREDENTIALS = "docker-hub"   // Jenkins credential ID for Docker Hub
+        DOCKERHUB_CREDENTIALS = "docker-hub"   // Jenkins ID for Docker Hub credentials
         SNYK_TOKEN = credentials("snyktoken")  // Jenkins secret text for Snyk token
+        DOCKER_HOST = "tcp://dind:2375"        // points to DinD container
+        DOCKER_TLS_VERIFY = "0"
     }
 
     stages {
@@ -20,10 +22,9 @@ pipeline {
         stage('Install & Build') {
             steps {
                 echo "Installing Node.js dependencies..."
-                sh "docker run --rm -v ${WORKSPACE}:/app -w /app node:${NODE_VERSION} npm install"
-                
+                sh 'npm install'
                 echo "Running tests..."
-                sh "docker run --rm -v ${WORKSPACE}:/app -w /app node:${NODE_VERSION} npm test"
+                sh 'npm test'
             }
         }
 
@@ -31,11 +32,9 @@ pipeline {
             steps {
                 echo "Running Snyk security scan..."
                 sh """
-                    docker run --rm -v ${WORKSPACE}:/app -w /app node:${NODE_VERSION} /bin/sh -c \"
-                        npm install -g snyk &&
-                        snyk auth ${SNYK_TOKEN} &&
-                        snyk test --severity-threshold=high
-                    \"
+                    npm install -g snyk
+                    snyk auth ${SNYK_TOKEN}
+                    snyk test --severity-threshold=high
                 """
             }
         }
@@ -43,7 +42,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ${WORKSPACE}"
+                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
             }
         }
 
