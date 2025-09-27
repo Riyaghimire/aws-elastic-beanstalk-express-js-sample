@@ -29,15 +29,17 @@ pipeline {
         }
 
         stage('Snyk Scan') {
-    steps {
-        echo "Running Snyk security scan..."
-        sh """
-            npm install snyk --no-save
-            npx snyk auth ${SNYK_TOKEN}
-            npx snyk test --severity-threshold=high
-        """
-    }
-}
+            steps {
+                echo "Running Snyk security scan..."
+                withCredentials([string(credentialsId: 'snyktoken', variable: 'SNYK_TOKEN')]) {
+                    sh """
+                        npm install snyk --no-save
+                        export SNYK_TOKEN=$SNYK_TOKEN
+                        npx snyk test --severity-threshold=high
+                    """
+                }
+            }
+        }
 
 
         stage('Build Docker Image') {
