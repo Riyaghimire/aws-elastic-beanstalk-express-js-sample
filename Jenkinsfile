@@ -3,7 +3,6 @@ pipeline {
 
     options {
         timeout(time: 20, unit: 'MINUTES')  // Stop pipeline if it runs too long
-        ansiColor('xterm')                  // Optional: colored console output
     }
 
     environment {
