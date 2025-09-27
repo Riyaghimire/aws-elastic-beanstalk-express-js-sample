@@ -1,11 +1,16 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 20, unit: 'MINUTES')  // Stop pipeline if it runs too long
+        ansiColor('xterm')                  // Optional: colored console output
+    }
+
     environment {
         NODE_VERSION = "16"
         APP_NAME = "aws-elastic-beanstalk-express-js-sample"
         IMAGE_NAME = "riyaghimire54/${APP_NAME}"
-        DOCKERHUB_CREDENTIALS = "docker-hub"   // Jenkins ID for Docker Hub credentials
+        DOCKERHUB_CREDENTIALS = "docker-hub"   // Jenkins credentials ID for Docker Hub
         SNYK_TOKEN = credentials("snyktoken") // Jenkins secret text for Snyk token
     }
 
@@ -13,7 +18,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Cloning repository..."
-                checkout scm
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [[$class: 'CloneOption', depth: 1, shallow: true]],
+                    userRemoteConfigs: [[url: 'https://github.com/Riyaghimire/aws-elastic-beanstalk-express-js-sample.git',
+                                         credentialsId: 'GitHub-pat']]]
+                )
             }
         }
 
@@ -21,12 +32,12 @@ pipeline {
             agent {
                 docker {
                     image "node:${NODE_VERSION}"
-                    args '-u root:root' // run as root inside container
+                    args '-u root:root -v $HOME/.npm:/root/.npm'  // mount npm cache
                 }
             }
             steps {
                 echo "Installing dependencies..."
-                sh 'npm install'
+                sh 'npm ci'  // faster, clean install
                 echo "Running tests..."
                 sh 'npm test'
             }
@@ -46,7 +57,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
+                sh "docker build --pull -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
             }
         }
 
