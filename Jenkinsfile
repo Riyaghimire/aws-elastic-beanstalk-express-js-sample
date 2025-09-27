@@ -39,12 +39,20 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                echo "Building Docker image..."
-                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
-            }
-        }
+        stage('Checkout Docker Repo') {
+    steps {
+        echo "Cloning Docker project repo..."
+        git url: 'https://github.com/Riyaghimire/Project2-Compose.git', branch: 'main'
+    }
+}
+
+stage('Build Docker Image') {
+    steps {
+        echo "Building Docker image from Project2-Compose..."
+        sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ./Project2-Compose"
+    }
+}
+
 
         stage('Push to Docker Hub') {
             steps {
