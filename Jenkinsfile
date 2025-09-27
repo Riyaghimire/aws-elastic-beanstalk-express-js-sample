@@ -52,7 +52,7 @@ pipeline {
 stage('Build Docker Image') {
     steps {
         echo "Building Docker image from Project2-Compose..."
-        sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ./Project2-Compose"
+        sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -f ./Project2-Compose/jenkins/Dockerfile ./Project2-Compose"
     }
 }
 
