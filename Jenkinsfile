@@ -5,6 +5,8 @@ pipeline {
         NODE_VERSION = "16"
         APP_NAME = "aws-elastic-beanstalk-express-js-sample"
         IMAGE_NAME = "riyaghimire54/${APP_NAME}"
+        DOCKERHUB_CREDENTIALS = "docker-hub"   // Jenkins ID for Docker Hub credentials
+        SNYK_TOKEN = credentials("snyktoken") // Jenkins secret text for Snyk token
     }
 
     stages {
@@ -19,40 +21,43 @@ pipeline {
             agent {
                 docker {
                     image "node:${NODE_VERSION}"
-                    args '-u root:root' // run as root to install deps
+                    args '-u root:root' // run as root inside container
                 }
             }
             steps {
+                echo "Installing dependencies..."
                 sh 'npm install'
+                echo "Running tests..."
                 sh 'npm test'
             }
         }
 
         stage('Snyk Scan') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'snyktoken', usernameVariable: 'SNYK_USER', passwordVariable: 'SNYK_TOKEN')]) {
-                    sh '''
-                    npm install -g snyk
-                    snyk auth $SNYK_TOKEN
-                    snyk test --severity-threshold=high
-                    '''
-                }
+                echo "Running Snyk security scan..."
+                sh """
+                npm install -g snyk
+                snyk auth ${SNYK_TOKEN}
+                snyk test --severity-threshold=high
+                """
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:latest ."
+                echo "Building Docker image..."
+                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
+                echo "Pushing Docker image to Docker Hub..."
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
                     echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push ${IMAGE_NAME}:latest
-                    '''
+                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    """
                 }
             }
         }
