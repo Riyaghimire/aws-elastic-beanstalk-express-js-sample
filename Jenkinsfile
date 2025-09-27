@@ -7,8 +7,6 @@ pipeline {
         IMAGE_NAME = "riyaghimire54/${APP_NAME}"
         DOCKERHUB_CREDENTIALS = "docker-hub"   // Jenkins ID for Docker Hub credentials
         SNYK_TOKEN = credentials("snyktoken")  // Jenkins secret text for Snyk token
-        DOCKER_HOST = "tcp://dind:2375"        // points to DinD container
-        DOCKER_TLS_VERIFY = "0"
     }
 
     stages {
@@ -32,15 +30,14 @@ pipeline {
             steps {
                 echo "Running Snyk security scan..."
                 withCredentials([string(credentialsId: 'snyktoken', variable: 'SNYK_TOKEN')]) {
-                    sh """
+                    sh '''
                         npm install snyk --no-save
                         export SNYK_TOKEN=$SNYK_TOKEN
                         npx snyk test --severity-threshold=high
-                    """
+                    '''
                 }
             }
         }
-
 
         stage('Build Docker Image') {
             steps {
@@ -53,10 +50,10 @@ pipeline {
             steps {
                 echo "Pushing Docker image to Docker Hub..."
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
+                    sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                    """
+                    '''
                 }
             }
         }
